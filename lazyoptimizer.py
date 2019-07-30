@@ -5,11 +5,20 @@ import keras.backend as K
 
 
 class LazyOptimizer(Optimizer):
-    """继承Optimizer类，包装原有优化器，实现Lazy版优化器
+    """Inheriting Optimizer class, wrapping the original optimizer
+    to achieve a new corresponding lazy optimizer.
+    (Not only LazyAdam, but also LazySGD with momentum if you like.)
+    # Arguments
+        optimizer: an instance of keras optimizer (supporting
+                    all keras optimizers currently available);
+        embedding_layers: all Embedding layers you want to update sparsely.
+    # Returns
+        a new keras optimizer.
+    继承Optimizer类，包装原有优化器，实现Lazy版优化器
     （不局限于LazyAdam，任何带动量的优化器都可以有对应的Lazy版）。
     # 参数
         optimizer：优化器实例，支持目前所有的keras优化器；
-        embedding_layers：模型中的Embedding层。
+        embedding_layers：模型中所有你喜欢稀疏更新的Embedding层。
     # 返回
         一个新的keras优化器
     """
@@ -30,7 +39,8 @@ class LazyOptimizer(Optimizer):
         self.optimizer.get_gradients = self.get_gradients
         self._cache_grads = {}
     def get_gradients(self, loss, params):
-        """简单改变一下get_gradients方法，避免重复计算梯度
+        """Cache the gradients to avoiding recalculating.
+        把梯度缓存起来，避免重复计算，提高效率。
         """
         _params = []
         for p in params:
@@ -41,12 +51,12 @@ class LazyOptimizer(Optimizer):
             self._cache_grads[(loss, p)] = g
         return [self._cache_grads[(loss, p)] for p in params]
     def get_updates(self, loss, params):
-        # 仅初始化
+        # Only for initialization (仅初始化)
         self.optimizer.get_updates(loss, params)
-        # 常规更新
+        # Common updates (常规更新)
         dense_params = [p for p in params if p not in self.embeddings]
         self.updates = self.optimizer.get_updates(loss, dense_params)
-        # 稀疏更新
+        # Sparse update (稀疏更新)
         sparse_params = self.embeddings
         sparse_grads = self.get_gradients(loss, sparse_params)
         sparse_flags = [
@@ -56,6 +66,9 @@ class LazyOptimizer(Optimizer):
         original_lr = self.optimizer.lr
         for f, p in zip(sparse_flags, sparse_params):
             self.optimizer.lr = original_lr * K.cast(f, 'float32')
+            # updates only when gradients are not equal to zeros.
+            # (gradients are equal to zeros means these words are not sampled very likely.)
+            # 仅更新梯度不为0的Embedding（梯度为0意味着这些词很可能是没被采样到的）
             self.updates.extend(
                 self.optimizer.get_updates(loss, [p])
             )
