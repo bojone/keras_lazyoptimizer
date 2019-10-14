@@ -19,3 +19,6 @@ see <a href="https://github.com/bojone/keras_lazyoptimizer/blob/master/imdb_lstm
 直接将原来用的带动量的优化器, 如 `Adam(1e-3)`, 替换为 `LazyOptimizer(Adam(1e-3), embedding_layers)` 就行了.
 
 参考 <a href="https://github.com/bojone/keras_lazyoptimizer/blob/master/imdb_lstm_test.py">imdb_lstm_test.py</a>.
+
+## 交流
+QQ交流群：67729435，微信群请加机器人微信号spaces_ac_cn
