@@ -60,7 +60,7 @@ class LazyOptimizer(Optimizer):
         sparse_params = self.embeddings
         sparse_grads = self.get_gradients(loss, sparse_params)
         sparse_flags = [
-            K.all(K.not_equal(g, 0), axis=-1, keepdims=True)
+            K.any(K.not_equal(g, 0), axis=-1, keepdims=True)
             for g in sparse_grads
         ]
         original_lr = self.optimizer.lr
